@@ -15,4 +15,4 @@ if __name__ == '__main__':
         data = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(random.randint(32, 256)))
         print data
         sock.sendall(data+'\n')
-        time.sleep(0.05)
+        time.sleep(0.005)
