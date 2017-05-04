@@ -13,29 +13,26 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
-import netscape.javascript.JSObject;
 
 public class Main extends Application {
 
-  private int port;
   private boolean makeRead = true;
 
   private ServerSocket socketServer;
-  Thread serverThread;
 
   private TextField portNumberTextField;
-
-  WebView webView = new WebView();
-  WebEngine webEngine = webView.getEngine();
+  private TextFlow textArea;
 
   @Override
   public void start(Stage primaryStage) throws Exception {
@@ -72,30 +69,34 @@ public class Main extends Application {
     hbox.setSpacing(7);
     hbox.setAlignment(Pos.CENTER_LEFT);
 
-    webEngine.loadContent("<div id='content'></div>");
+    textArea = new TextFlow();
+    ScrollPane scroll = new ScrollPane();
+    scroll.setContent(textArea);
+    scroll.setFitToWidth(true);
 
     BorderPane borderPane = new BorderPane();
     borderPane.setTop(hbox);
-    borderPane.setCenter(webView);
+    borderPane.setCenter(scroll);
     Scene scene = new Scene(borderPane, 800, 600);
     primaryStage.setScene(scene);
     primaryStage.show();
   }
 
   private void clearTextArea() {
-    webEngine.loadContent("<div id='content'></div>");
+    textArea.getChildren().clear();
   }
 
   private void startSocketServerAction() {
     if (portNumberTextField.getText().isEmpty()) {
       // Show an alert box or something
-//      txtArea.appendText("PLEASE INFORM THE PORT NUMBER\n");
+      addTextToArea("PLEASE INFORM THE PORT NUMBER\n");
       return;
     }
+    int port;
     try {
       port = Integer.valueOf(portNumberTextField.getText());
     } catch (Exception e) {
-//      txtArea.appendText("Failed to convert port to number.\n");
+      addTextToArea("Failed to convert port to number.\n");
       e.printStackTrace();
       return;
     }
@@ -103,17 +104,17 @@ public class Main extends Application {
     try {
       socketServer = new ServerSocket(port);
       // Starts a new String
-//      txtArea.appendText("Before Runnable\n");
+      addTextToArea("Before Runnable\n");
       ServerSocketListener serverSocketListener = new ServerSocketListener();
-      serverThread = new Thread(serverSocketListener);
+      Thread serverThread = new Thread(serverSocketListener);
       makeRead = true;
       serverThread.start();
-//      txtArea.appendText("After Runnable\n");
+      addTextToArea("After Runnable\n");
     } catch (IOException e) {
-//      txtArea.appendText("Unable to process client request\n");
+      addTextToArea("Unable to process client request\n");
       e.printStackTrace();
     }
-//    txtArea.appendText("Waiting for clients to connect...\n");
+    addTextToArea("Waiting for clients to connect...\n");
   }
 
   private void stopSocketServerAction() {
@@ -121,17 +122,11 @@ public class Main extends Application {
       makeRead = false;
       socketServer.close();
 
-//      txtArea.appendText("Stopped listening on port " + String.valueOf(this.port) + "\n");
+      addTextToArea("Stopped listening on port " + String.valueOf("5060") + "\n");
     } catch (IOException e) {
-//      txtArea.appendText("Failed to close the socket server\n");
+      addTextToArea("Failed to close the socket server\n");
       e.printStackTrace();
     }
-  }
-
-  private void updateWebEngine(String data) {
-    JSObject jsobj = (JSObject) this.webEngine.executeScript("document.getElementById('content')");
-    jsobj.eval("document.getElementById('content').innerHTML+=\"<span style='background-color: red'>" + data + "</span><br/>\"");
-//    jsobj.call("append", "<b>" + data + "</b>");
   }
 
   private class ServerSocketListener implements Runnable {
@@ -140,25 +135,21 @@ public class Main extends Application {
     public void run() {
       try {
         Socket sock = socketServer.accept();
-//        txtArea.appendText("New connection from " + sock.getInetAddress().getHostAddress() + "\n");
+        addTextToArea("New connection from " + sock.getInetAddress().getHostAddress() + "\n");
         InputStream sock_in = sock.getInputStream();
         Scanner scanner = new Scanner(sock_in);
         while (makeRead) {
           if (scanner.hasNext()) {
             String data = scanner.nextLine();
-//            System.out.println(data);
-//            txtArea.appendText(data + '\n');
-            Platform.runLater(() -> {
-              // code that updates UI
-              updateWebEngine(data);
-            });
+            // code that updates UI
+            addTextToArea(data);
           }
         }
         sock.close();
       } catch (SocketException e) {
-//        txtArea.appendText("Socket Closed\n");
+        addTextToArea("Socket Closed\n");
       } catch (IOException e) {
-//        txtArea.appendText("Failed to accept connections\n");
+        addTextToArea("Failed to accept connections\n");
         e.printStackTrace();
       } finally {
         try {
@@ -168,6 +159,15 @@ public class Main extends Application {
         }
       }
     }
+  }
+
+  private void addTextToArea(String data) {
+    Platform.runLater(() -> {
+      Text t = new Text(data + "\n");
+      t.setFont(Font.font("Helvetica", 18));
+      textArea.getChildren().add(t);
+    });
+
   }
 
   public static void main(String[] args) {
